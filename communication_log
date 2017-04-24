@@ -1,1 +1,2 @@
 4-11 just added the mfs.c file to use as a bench so I don't have to retype all includes, etc. -David
+4-24 gutted mfs.c, implemented an argument getter and checker, next is to put make resource arrays -Maxwell
