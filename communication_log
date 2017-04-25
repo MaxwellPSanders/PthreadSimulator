@@ -1,2 +1,34 @@
 4-11 just added the mfs.c file to use as a bench so I don't have to retype all includes, etc. -David
+
 4-24 gutted mfs.c, implemented an argument getter and checker, next is to put make resource arrays -Maxwell
+
+4-24 Changed function naming to camelCase style instead of underscore. I know that I didn't fo this in my msh.c
+     file but I can already tell that with us both working on this it will get confusing. For the remainder 
+     of the assignment I recommend this format:
+         - all variables follow the underscore naming convention
+             Examples:
+
+                 int this_is_an_example_int;
+
+                 float pthread_assignment_expected_grade;
+
+         - all functions follow the camelCase naming convention
+             Examples:
+
+                 void awesomePthreadSpawningFunction(void){
+                     ...
+                 }
+
+                 float functionThatReturnsOurGradeOnThisAssignment(void){
+                     pthread_assignment_expected_grade = 100.00;
+                     return pthread_assignment_expected_grade;
+                 }
+
+     This will make it easier to tell when something is a variable or a function with a return value.
+     If you want to add other conventions like all variables that are pointers are named ptrXXXX or
+     all global varaibles are XXXX_GBL then that works too - just add a note in here. This is the 
+     type of stuff that they dont care about in school but definitely care about when you are working 
+     in industry on a large project like an F-35 Simulator with 10 other coders. -David
+
+4-25 You will need to compile the code with the following now that I have added threading functions:
+     "g++ ksf.c -o ksf -lpthread". I have created the code up to the spawning of threads.
