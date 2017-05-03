@@ -67,9 +67,10 @@ int verifyNum(char* str){
 void *kerbalTask(void *arg) {
     int kerbal_id; // id of the current thread
     int grabbed[] = {0,0,0}; // whether or not it grabbed any resources in this iteration
-    int eng_index; // index of the engine grabbed
-    int fus_index; // index of the fuselage grabbed
-    int fuel_index; // index of the fueltank grabbed
+    int eng_index = -1; // index of the engine grabbed
+    int fus_index = -1; // index of the fuselage grabbed
+    int fuel_index = -1; // index of the fueltank grabbed
+    int wait_notif = 1; // used for the wait notification
     int i; // general purpose counter
 
     //gives the kerbal a unique identifier, doesn't matter the order
@@ -81,36 +82,41 @@ void *kerbalTask(void *arg) {
     //while loops because they are better than for loops
     while(1){
         //try to grab the resources, if you can't then sleep and try again
-        sem_trywait(&resource_mutex);
-            //loop through each array    
-            grabbed[0] = 0;
-            for(i = 0; i < ENGINE_COUNT; i ++){
-                if(!ENGINES[i]){
-                    grabbed[0] = 1; 
-                    eng_index = i; 
-                    ENGINES[i] = 1;
-                    break;
+        sem_wait(&resource_mutex);
+            //loop through each array if you don't have a part grab one  
+            if(eng_index == -1){ 
+                grabbed[0] = 0;
+                for(i = 0; i < ENGINE_COUNT; i ++){
+                    if(!ENGINES[i]){
+                        grabbed[0] = 1; 
+                        eng_index = i; 
+                        ENGINES[i] = 1;
+                        break;
+                    }
                 }
             } 
-            grabbed[1] = 0;
-            for(i = 0; i < FUSELAGE_COUNT; i ++){
-                if(!FUSELAGES[i]){
-                    grabbed[1] = 1; 
-                    fus_index = i; 
-                    FUSELAGES[i] = 1;
-                    break;
-                }
-            } 
-            grabbed[2] = 0;
-            for(i = 0; i < FUEL_TANK_COUNT; i ++){
-                if(!FUEL_TANKS[i]){
-                    grabbed[2] = 1; 
-                    fuel_index = i; 
-                    FUEL_TANKS[i] = 1;
-                    break;
+            if(fus_index == -1){
+                grabbed[1] = 0;
+                for(i = 0; i < FUSELAGE_COUNT; i ++){
+                    if(!FUSELAGES[i]){
+                        grabbed[1] = 1; 
+                        fus_index = i; 
+                        FUSELAGES[i] = 1;
+                        break;
+                    }
+                } 
+            }
+            if(fuel_index == -1){
+                for(i = 0; i < FUEL_TANK_COUNT; i ++){
+                    grabbed[2] = 0;
+                    if(!FUEL_TANKS[i] && fuel_index == -1){
+                        grabbed[2] = 1; 
+                        fuel_index = i; 
+                        FUEL_TANKS[i] = 1;
+                        break;
+                    }
                 }
             }
-
             //check if it grabbed all of them
             if(grabbed[0] &&
                grabbed[1] &&
@@ -118,16 +124,13 @@ void *kerbalTask(void *arg) {
                 printf("Kerbal %d: Enters into the assembly facility\n", kerbal_id);
                 break;   
             }
-            //otherwise return everything
-            else{
-                if(grabbed[0])
-                    ENGINES[eng_index] = 0;
-                if(grabbed[0])
-                    ENGINES[eng_index] = 0;
-                if(grabbed[0])
-                    ENGINES[eng_index] = 0;
 
-            } 
+            //notify that you are waiting
+            if(wait_notif){
+                printf("Kerbal %d: Waiting for the assembly facility\n", kerbal_id); 
+                wait_notif--;
+            }            
+
         sem_post(&resource_mutex);
             
         //didn't grab anything so wait
@@ -140,7 +143,11 @@ void *kerbalTask(void *arg) {
                 kerbal_id, eng_index + 1, fus_index + 1, fuel_index + 1);
 
     //try to launch the rocket, fly it, land it
-    sem_wait(&launch_pad_mutex);
+    if(!sem_trywait(&launch_pad_mutex)){}        
+    else{ 
+        printf("Kerbal %d: Waiting for launch pad\n", kerbal_id);
+        sem_wait(&launch_pad_mutex);
+    }
         printf("Kerbal %d: Arriving at launch pad\n", kerbal_id);
         for(i = 10; i > 0; i --){
              printf("Kerbal %d: Launch countdown %d ...\n", kerbal_id, i);
