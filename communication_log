@@ -32,3 +32,17 @@
 
 4-25 You will need to compile the code with the following now that I have added threading functions:
      "g++ ksf.c -o ksf -lpthread". I have created the code up to the spawning of threads.
+
+5-02 Lots of stuff done.
+     Accomplished:
+     Creation of pthreads is done, as well as the numbering of them
+     Scrapped half the semaphores, only need one (if a kerbal can grab one, he should be able to grab all
+	or none, otherwise deadlock will assuredly occur)
+     My vision/what needs to be done:
+     The kerbal needs to check the 0 arrays, 0 indicates that there is a free resource, they will take the index
+	of that first available 0, change it to a 1. If they were able to get an index for every resource, let go
+  	of the semaphores and start assembling. 
+     The problem in my mind is where they have to indicate that they didn't get all of the resources, they need to print
+     it out, but then never print it out again until they do get more resources. 
+     I don't really know what else to say, if you have questions please don't hesitate to ask, I know this is probably unclear.
+	-Maxwell 

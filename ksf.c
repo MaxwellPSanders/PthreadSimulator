@@ -17,11 +17,12 @@
 #include <semaphore.h> 
 
 // Mutexes must be global and readable by all functions and threads
-sem_t engine_mutex; // Mutex to guard the critical section of avaliable engines
-sem_t fuselage_mutex; // Mutex to guard the critical section of available fuselages
-sem_t fuel_tank_mutex; // Mutex to guard the critical section of available fuel tanks
+sem_t resource_mutex; // Mutex to guard the critical section of available resources
 sem_t launch_pad_mutex; // Mutex to guard the critical section of the launch_pad (only one)
-sem_t kerbal_mutex; // Mutex to gaur the critical section of avaliable kerbals
+sem_t count_mutex; // Mutex that will let the kerbals have a nice unique number
+
+int MY_NUM = 0; //the number of the kerbals, will count up
+int* engines, *fuselages, *fuel_tanks; //these will hold 0 allocated arrays of resources
 
 /* Function: verifyNum
  * Parameters: string
@@ -56,13 +57,26 @@ int verifyNum(char* str){
 }
 
 
-// This may need to be someting diffferent that void (void) once
-// we fill it in.
-void kerbalThread(void) {
+/* Function: kerbalTask
+ * Parameters: kerbal_id
+ * returns: nothing
+ * Description: This is the kerbal function, loops and does all
+ * the tasks kerbals are supposed to do
+ */
+void *kerbalTask(void *arg) {
+    int kerbal_id;
 
+    //gives the kerbal a unique identifier, doesn't matter the order
+    sem_wait(&count_mutex);
+    MY_NUM ++;
+    kerbal_id = MY_NUM;
+    sem_post(&count_mutex);
+
+    printf("%d is doing things\n", kerbal_id);
+    sleep(1);
     // This is where we do the infinite for loop specified in the
     // assignment PDF. I just made it a return for the time-being.
-    return; 
+    return NULL; 
 }
 
 /* Function: main
@@ -72,7 +86,7 @@ void kerbalThread(void) {
  */
 int main(int argv, char* args[]){
     int counter = 0; // counter for general purpose counting
-    int engines, fuselages, fuel_tanks, kerbals;
+    pthread_t* kerbals; //arrays holding all of the resources
     // check to see if there are not the correct amount of args
     if( argv != 5 ){
         printf("Invalid number of arguments\n");
@@ -88,26 +102,15 @@ int main(int argv, char* args[]){
         }
     }
     
-    engines = atoi(args[1]);
-    fuselages = atoi(args[2]);
-    fuel_tanks = atoi(args[3]);
-    kerbals = atoi(args[4]);
-
-    // THIS IS ONLY FOR VERIFICATION ON FUNCTIONALITY/DEBUGGING
-    printf("####################\n#  DEBUG (DELETE ME BEFORE TURNING IN):"
-           "\n#\tENG = %d\n#\tFUSLG = %d\n#\tFUELTNKS = %d\n#\tKERBALS = "
-           "%d\n####################\n",
-           engines,
-           fuselages,
-           fuel_tanks,
-           kerbals);    
+    engines = (int*) calloc(atoi(args[1]), sizeof(int));
+    fuselages = (int*) calloc(atoi(args[2]), sizeof(int));
+    fuel_tanks = (int*) calloc(atoi(args[3]), sizeof(int));
+    kerbals = (pthread_t*) malloc(atoi(args[4])*sizeof(pthread_t));
 
     // Initializes mutex to keep track of number of resources
-    sem_init(&engine_mutex, 0, engines);
-    sem_init(&fuselage_mutex, 0, fuselages);
-    sem_init(&fuel_tank_mutex, 0, fuel_tanks);
-    sem_init(&kerbal_mutex, 0, kerbals);
+    sem_init(&resource_mutex, 0, 1);
     sem_init(&launch_pad_mutex, 0, 1); // Always only 1 launch pad
+    sem_init(&count_mutex, 0, 1); // Always only 1 launch pad
 
 /*
 
@@ -129,10 +132,25 @@ int main(int argv, char* args[]){
 
 */
 
-    sem_destroy(&kerbal_mutex);
-    sem_destroy(&engine_mutex);
-    sem_destroy(&fuselage_mutex);
-    sem_destroy(&fuel_tank_mutex);
+    int kerbal_count = atoi(args[4]); //holds how many kerbals there are
+    //create all the pthreads, they will run kerbal task
+    for(counter = 0; counter < kerbal_count; counter ++){
+          if(pthread_create(&kerbals[counter], NULL, kerbalTask, NULL )){
+              perror("Error creating thread: ");
+              exit( EXIT_FAILURE ); 
+          }        
+    }
+
+ 
+    //wait for all the pthreads
+    for(counter = 0; counter < kerbal_count; counter ++){
+        if(pthread_join(kerbals[counter], NULL)){
+            perror("Problem with pthread_join: ");
+        }
+        printf("kerbal %d finished.\n", counter);
+    }
+
+    sem_destroy(&resource_mutex);
     sem_destroy(&launch_pad_mutex);
     
 }
