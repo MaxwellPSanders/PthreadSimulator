@@ -22,7 +22,8 @@ sem_t launch_pad_mutex; // Mutex to guard the critical section of the launch_pad
 sem_t count_mutex; // Mutex that will let the kerbals have a nice unique number
 
 int MY_NUM = 0; //the number of the kerbals, will count up
-int* engines, *fuselages, *fuel_tanks; //these will hold 0 allocated arrays of resources
+int* ENGINES, *FUSELAGES, *FUEL_TANKS; //these will hold 0 allocated arrays of resources
+int ENGINE_COUNT, FUSELAGE_COUNT, FUEL_TANK_COUNT;
 
 /* Function: verifyNum
  * Parameters: string
@@ -64,19 +65,103 @@ int verifyNum(char* str){
  * the tasks kerbals are supposed to do
  */
 void *kerbalTask(void *arg) {
-    int kerbal_id;
+    int kerbal_id; // id of the current thread
+    int grabbed[] = {0,0,0}; // whether or not it grabbed any resources in this iteration
+    int eng_index; // index of the engine grabbed
+    int fus_index; // index of the fuselage grabbed
+    int fuel_index; // index of the fueltank grabbed
+    int i; // general purpose counter
 
     //gives the kerbal a unique identifier, doesn't matter the order
     sem_wait(&count_mutex);
-    MY_NUM ++;
-    kerbal_id = MY_NUM;
+        MY_NUM ++;
+        kerbal_id = MY_NUM;
     sem_post(&count_mutex);
 
-    printf("%d is doing things\n", kerbal_id);
-    sleep(1);
-    // This is where we do the infinite for loop specified in the
-    // assignment PDF. I just made it a return for the time-being.
-    return NULL; 
+    //while loops because they are better than for loops
+    while(1){
+        //try to grab the resources, if you can't then sleep and try again
+        sem_trywait(&resource_mutex);
+            //loop through each array    
+            grabbed[0] = 0;
+            for(i = 0; i < ENGINE_COUNT; i ++){
+                if(!ENGINES[i]){
+                    grabbed[0] = 1; 
+                    eng_index = i; 
+                    ENGINES[i] = 1;
+                    break;
+                }
+            } 
+            grabbed[1] = 0;
+            for(i = 0; i < FUSELAGE_COUNT; i ++){
+                if(!FUSELAGES[i]){
+                    grabbed[1] = 1; 
+                    fus_index = i; 
+                    FUSELAGES[i] = 1;
+                    break;
+                }
+            } 
+            grabbed[2] = 0;
+            for(i = 0; i < FUEL_TANK_COUNT; i ++){
+                if(!FUEL_TANKS[i]){
+                    grabbed[2] = 1; 
+                    fuel_index = i; 
+                    FUEL_TANKS[i] = 1;
+                    break;
+                }
+            }
+
+            //check if it grabbed all of them
+            if(grabbed[0] &&
+               grabbed[1] &&
+               grabbed[2]){
+                printf("Kerbal %d: Enters into the assembly facility\n", kerbal_id);
+                break;   
+            }
+            //otherwise return everything
+            else{
+                if(grabbed[0])
+                    ENGINES[eng_index] = 0;
+                if(grabbed[0])
+                    ENGINES[eng_index] = 0;
+                if(grabbed[0])
+                    ENGINES[eng_index] = 0;
+
+            } 
+        sem_post(&resource_mutex);
+            
+        //didn't grab anything so wait
+        sleep(1);
+    }
+    sem_post(&resource_mutex);
+
+    sleep(15); // what a riveting assembly
+    printf("Kerbal %d: Assembles Engine %d, Fuselage %d, Fuel Tank %d\n",
+                kerbal_id, eng_index + 1, fus_index + 1, fuel_index + 1);
+
+    //try to launch the rocket, fly it, land it
+    sem_wait(&launch_pad_mutex);
+        printf("Kerbal %d: Arriving at launch pad\n", kerbal_id);
+        for(i = 10; i > 0; i --){
+             printf("Kerbal %d: Launch countdown %d ...\n", kerbal_id, i);
+             sleep(1);
+        }
+        printf("Kerbal %d: Lift off!\n", kerbal_id);
+    sem_post(&launch_pad_mutex);
+       
+    sleep(5); //what an intense and exciting flight
+    printf("Kerbal %d: Landed!\n", kerbal_id);
+
+    //wait to return everything
+    sleep(5);
+    sem_wait(&resource_mutex);
+        printf("Kerbal %d: Dissasembles Engine %d, Fuselage %d, Fuel Tank %d\n",
+                kerbal_id, eng_index + 1, fus_index + 1, fuel_index + 1);
+        ENGINES[eng_index] = 0;           
+        FUSELAGES[fus_index] = 0;           
+        FUEL_TANKS[fuel_index] = 0;           
+    sem_post(&resource_mutex);
+    return NULL;   
 }
 
 /* Function: main
@@ -102,15 +187,19 @@ int main(int argv, char* args[]){
         }
     }
     
-    engines = (int*) calloc(atoi(args[1]), sizeof(int));
-    fuselages = (int*) calloc(atoi(args[2]), sizeof(int));
-    fuel_tanks = (int*) calloc(atoi(args[3]), sizeof(int));
+    ENGINES = (int*) calloc(atoi(args[1]), sizeof(int));
+    FUSELAGES = (int*) calloc(atoi(args[2]), sizeof(int));
+    FUEL_TANKS = (int*) calloc(atoi(args[3]), sizeof(int));
     kerbals = (pthread_t*) malloc(atoi(args[4])*sizeof(pthread_t));
+
+    ENGINE_COUNT = atoi(args[1]);
+    FUSELAGE_COUNT = atoi(args[2]);
+    FUEL_TANK_COUNT = atoi(args[3]);
 
     // Initializes mutex to keep track of number of resources
     sem_init(&resource_mutex, 0, 1);
     sem_init(&launch_pad_mutex, 0, 1); // Always only 1 launch pad
-    sem_init(&count_mutex, 0, 1); // Always only 1 launch pad
+    sem_init(&count_mutex, 0, 1); 
 
 /*
 
@@ -147,12 +236,11 @@ int main(int argv, char* args[]){
         if(pthread_join(kerbals[counter], NULL)){
             perror("Problem with pthread_join: ");
         }
-        printf("kerbal %d finished.\n", counter);
     }
 
     sem_destroy(&resource_mutex);
     sem_destroy(&launch_pad_mutex);
-    
+    sem_destroy(&count_mutex);    
 }
 
 

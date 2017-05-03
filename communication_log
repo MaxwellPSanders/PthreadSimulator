@@ -45,4 +45,23 @@
      The problem in my mind is where they have to indicate that they didn't get all of the resources, they need to print
      it out, but then never print it out again until they do get more resources. 
      I don't really know what else to say, if you have questions please don't hesitate to ask, I know this is probably unclear.
-	-Maxwell 
+	-Maxwell
+
+5-03 Have you ever had a problem with a program that just makes you feel like a piece of trash???? 
+     Literally what I have just experienced, I just spent the last hour trying to figure out why the
+     semaphores aren't working, I was getting really panicky
+     .
+     .
+     .
+     .
+     .
+     .
+     .
+     .
+     Turns out OS X doesn't work with semaphores, compiled and ran the program on Omega
+     This thing is 1 more hour from being done.
+     What's left:
+     Notifying that you tried to get parts but couldn't
+     Notifying that you tried to get on the launch pad but couldn't
+     This has been fun
+	-Maxwell
